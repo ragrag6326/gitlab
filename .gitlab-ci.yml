@@ -25,21 +25,22 @@ build:
   script:
   - echo $CI_COMMIT_TIMESTAMP | cut -d ":" -f 1-2 | sed 's/:/-/g' > Time.txt
   - TIME=$(cat Time.txt) 
-  - export IMAGETAG="$CI_DEFAULT_BRANCH"-"${TIME}"
-  - echo dockerac/cicd:"${IMAGETAG}"
-  - export IMAGETAG="$CI_DEFAULT_BRANCH"-"${TIME}"
-  - sed -i 's|dockerac/cicd|dockerac/cicd:${IMAGETAG}|g' prod/b1-prod.yaml 
-  - sed -i 's|dockerac/cicd|dockerac/cicd:${IMAGETAG}|g' dev/b1-dev.yaml
-  - sed -i 's|dockerac/cicd|dockerac/cicd:${IMAGETAG}|g' canary/b1-canary.yaml
-  
+  - export IMAGETAG="$CI_COMMIT_BRANCH"-"${TIME}"
+  - export IMAGETAG="$CI_COMMIT_BRANCH"-"${TIME}"
+  - sed -i 's|你的Docker帳號/cicd|你的Docker帳號/cicd:${IMAGETAG}|g' prod/b1-prod.yaml 
+  - sed -i 's|你的Docker帳號/cicd|你的Docker帳號/cicd:${IMAGETAG}|g' dev/b1-dev.yaml
+  - sed -i 's|你的Docker帳號/cicd|你的Docker帳號/cicd:${IMAGETAG}|g' canary/b1-canary.yaml
+#範例  
+# - sed -i 's|ragrag6326/cicd|ragrag6326/cicd:${IMAGETAG}|g' canary/b1-canary.yaml 
+
   - cat prod/b1-prod.yaml | envsubst | tee -a prod/prod.yaml > /dev/null
   - cat dev/b1-dev.yaml | envsubst | tee -a dev/dev.yaml > /dev/null
   - cat canary/b1-canary.yaml | envsubst | tee -a canary/canary.yaml  > /dev/null
 
-  - docker login --username dockerac --password-stdin < ./dockerpasswd
-  - docker build -t dockerac/cicd:"${IMAGETAG}" .
+  - docker login --username 你的Docker帳號 --password-stdin < ./dockerpasswd
+  - docker build -t 你的Docker帳號/cicd:"${IMAGETAG}" .
   - docker images
-  - docker push dockerac/cicd:"${IMAGETAG}"
+  - docker push 你的Docker帳號/cicd:"${IMAGETAG}"
 
 
 dev:
@@ -52,11 +53,11 @@ dev:
   tags:
     - docker
   script:
+# - kubectl config get-contexts
   - kubectl config use-context devops/cicd:cicd
   - sed -i.bak 's#LoadBalancer#ClusterIP#' svc/service.yaml
   - kubectl get ns dev || kubectl create ns dev
   - kubectl apply -f svc/service.yaml -n dev
-  - kubectl get po -n dev | grep "dev" && kubectl delete -f dev/b1-dev.yaml -n prod 
   - kubectl apply -f dev/dev.yaml -n dev
 
 canary:
