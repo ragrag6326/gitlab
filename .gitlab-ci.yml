@@ -70,6 +70,7 @@ canary:
   tags:
     - docker
   script:
+# - kubectl config get-contexts
   - kubectl config use-context devops/cicd:cicd
   - kubectl get ns prod || kubectl create ns prod
   - kubectl apply -f svc/service.yaml -n prod
@@ -85,6 +86,7 @@ prod:
   tags:
     - docker
   script:
+# - kubectl config get-contexts
   - kubectl config use-context devops/cicd:cicd
   - kubectl get ns prod || kubectl create ns prod
   - kubectl apply -f svc/service.yaml -n prod
