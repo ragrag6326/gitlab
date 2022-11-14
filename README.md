@@ -3,8 +3,8 @@
 
 ##   .gitlab-ci.yml檔 修改注意事項
   
-dockerac 修改成自己帳號
-./dockerpass  (密碼打在這邊)
+修改你的Docker帳號
+./dockerpass  (密碼打在這邊) 這個檔案裡面
 
 script:
 - kubectl config use-context << devops/cicd:cicd >>
