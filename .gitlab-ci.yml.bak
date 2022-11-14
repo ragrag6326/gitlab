@@ -1,0 +1,94 @@
+stages:
+  - build
+  - dev
+  - canary
+  - master
+
+
+build:
+  stage: build
+  image: 
+    name: docker
+  tags:
+    - docker
+  services:
+    - name: docker:dind
+      entrypoint: ["env", "-u", "DOCKER_HOST"]
+      command: ["dockerd-entrypoint.sh"]
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  artifacts:
+    paths:
+      - ./
+  before_script:
+    - apk update && apk add gettext
+  script:
+  - echo $CI_COMMIT_TIMESTAMP | cut -d ":" -f 1-2 | sed 's/:/-/g' > Time.txt
+  - TIME=$(cat Time.txt) 
+  - export IMAGETAG="$CI_DEFAULT_BRANCH"-"${TIME}"
+  - echo duckbubi15/cicd:"${IMAGETAG}"
+  - export IMAGETAG="$CI_DEFAULT_BRANCH"-"${TIME}"
+  - sed -i 's|duckbubi15/cicd|duckbubi15/cicd:${IMAGETAG}|g' prod/b1-prod.yaml 
+  - sed -i 's|duckbubi15/cicd|duckbubi15/cicd:${IMAGETAG}|g' dev/b1-dev.yaml
+  - sed -i 's|duckbubi15/cicd|duckbubi15/cicd:${IMAGETAG}|g' canary/b1-canary.yaml
+  
+  - cat prod/b1-prod.yaml | envsubst | tee -a prod/prod.yaml > /dev/null
+  - cat dev/b1-dev.yaml | envsubst | tee -a dev/dev.yaml > /dev/null
+  - cat canary/b1-canary.yaml | envsubst | tee -a canary/canary.yaml  > /dev/null
+
+  - docker login --username duckbubi15 --password-stdin < ./dockerpasswd
+  - docker build -t duckbubi15/cicd:"${IMAGETAG}" .
+  - docker images
+  - docker push duckbubi15/cicd:"${IMAGETAG}"
+
+
+dev:
+  stage: dev
+  only:
+    - dev
+  image:
+    name: bitnami/kubectl:latest 
+    entrypoint: [""]
+  tags:
+    - docker
+  script:
+  - kubectl config use-context gitlab-instance-c517e380/ding:agent1
+  - sed -i.bak 's#LoadBalancer#ClusterIP#' svc/service.yaml
+  - kubectl get ns dev || kubectl create ns dev
+  - kubectl apply -f svc/service.yaml -n dev
+  - kubectl get po -n dev | grep "dev" && kubectl delete -f dev/b1-dev.yaml -n prod 
+  - kubectl apply -f dev/dev.yaml -n dev
+
+canary:
+  stage: canary
+  only:
+    - canary
+  image:
+    name: bitnami/kubectl:latest 
+    entrypoint: [""]
+  tags:
+    - docker
+  script:
+  - kubectl config use-context devops/cicd:cicd
+  - kubectl get ns prod || kubectl create ns prod
+  - kubectl apply -f svc/service.yaml -n prod
+  - kubectl apply -f canary/canary.yaml -n prod
+
+prod:
+  stage: master
+  only:
+    - master
+  image:
+    name: bitnami/kubectl:latest 
+    entrypoint: [""]
+  tags:
+    - docker
+  script:
+  - kubectl config use-context devops/cicd:cicd
+  - kubectl get ns prod || kubectl create ns prod
+  - kubectl apply -f svc/service.yaml -n prod
+  - kubectl apply -f prod/prod.yaml -n prod
+
+
+
+
